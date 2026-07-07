@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Category extends Model
+{
+    protected $connection = 'product_db';
+
+    protected $fillable = [
+        'name',
+        'slug',
+        'description',
+    ];
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+}

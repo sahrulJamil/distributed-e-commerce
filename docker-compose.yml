@@ -1,0 +1,135 @@
+services:
+  app:
+    build:
+      context: ./laravel-api
+      dockerfile: Dockerfile
+    container_name: MyBelanjaGweh
+    volumes:
+      - ./laravel-api:/var/www/html
+    networks:
+      - distributed-network
+    depends_on:
+      - postgres-user
+      - postgres-product-primary
+      - postgres-transaction
+      - redis
+      - mongo
+
+  nginx-app:
+    image: nginx:1.27-alpine
+    container_name: nginx-app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./laravel-api:/var/www/html:ro
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - distributed-network
+
+  nginx-db:
+    image: nginx:1.27-alpine
+    container_name: nginx-db
+    ports:
+      - "15432:15432" # user_db
+      - "15433:15433" # product_db primary
+      - "15434:15434" # product_db replica
+      - "15435:15435" # transaction_db
+      - "16379:16379" # redis
+      - "17017:17017" # mongodb
+    volumes:
+      - ./nginx/db.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - postgres-user
+      - postgres-product-primary
+      - postgres-product-replica
+      - postgres-transaction
+      - redis
+      - mongo
+    networks:
+      - distributed-network
+
+  postgres-user:
+    image: postgres:16
+    container_name: postgres-user
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - distributed-network
+
+  postgres-product-primary:
+    image: postgres:16
+    container_name: postgres-product-primary
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby=on
+    volumes:
+      - postgres_product_primary_data:/var/lib/postgresql/data
+    networks:
+      - distributed-network
+
+  postgres-product-replica:
+    image: postgres:16
+    container_name: postgres-product-replica
+    environment:
+      POSTGRES_PASSWORD: password
+    entrypoint: ["/bin/bash", "/usr/local/bin/replica-entrypoint.sh"]
+    volumes:
+      - postgres_product_replica_data:/var/lib/postgresql/data
+      - ./postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    depends_on:
+      - postgres-product-primary
+    networks:
+      - distributed-network
+
+  postgres-transaction:
+    image: postgres:16
+    container_name: postgres-transaction
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_transaction_data:/var/lib/postgresql/data
+    networks:
+      - distributed-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - distributed-network
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - distributed-network
+
+networks:
+  distributed-network:
+    driver: bridge
+
+volumes:
+  postgres_user_data:
+  postgres_product_primary_data:
+  postgres_product_replica_data:
+  postgres_transaction_data:
+  mongo_data:
