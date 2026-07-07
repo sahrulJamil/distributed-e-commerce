@@ -1,4 +1,4 @@
-````md
+
 # 🛒 Distributed E-Commerce API
 
 > Sistem e-commerce produk koleksi dan merchandise hobi berbasis Laravel dengan implementasi **basis data terdistribusi**, **PostgreSQL replication**, **Redis cache**, dan **MongoDB activity log**.
@@ -427,4 +427,3 @@ Informatika — Sekolah Tinggi Teknologi Cipasung
 <p align="center">
   Dibangun untuk pembelajaran implementasi basis data terdistribusi pada sistem e-commerce.
 </p>
-```
