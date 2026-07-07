@@ -1,5 +1,3 @@
-Berikut README yang bisa langsung kamu pakai untuk `README.md` repo.
-
 ````md
 # 🛒 Distributed E-Commerce API
 
